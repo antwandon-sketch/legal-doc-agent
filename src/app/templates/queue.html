@@ -1,0 +1,86 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>legal-doc-agent — review queue</title>
+  <style>
+    body { font-family: -apple-system, Helvetica, Arial, sans-serif; max-width: 900px; margin: 2rem auto; padding: 0 1rem; color: #1a1a1a; }
+    h1 { font-size: 1.3rem; }
+    h2 { font-size: 1.05rem; margin-top: 2.5rem; border-bottom: 1px solid #ddd; padding-bottom: .3rem; }
+    .item { border: 1px solid #ddd; border-radius: 8px; padding: 1rem; margin-bottom: 1rem; }
+    .item.unverified { border-color: #c0392b; background: #fdf0ef; }
+    .item.low_confidence { border-color: #d68910; background: #fef9ee; }
+    .item.approved { border-color: #2e7d32; background: #f0f7f0; }
+    .item.rejected { border-color: #999; background: #f5f5f5; opacity: .8; }
+    .meta { font-size: .8rem; color: #555; margin-bottom: .5rem; }
+    .badge { display: inline-block; padding: .1rem .5rem; border-radius: 4px; font-size: .75rem; font-weight: 600; margin-right: .4rem; }
+    .badge.unverified { background: #c0392b; color: white; }
+    .badge.low_confidence { background: #d68910; color: white; }
+    .badge.rule { background: #555; color: white; }
+    .badge.llm { background: #2c5aa0; color: white; }
+    .context { font-family: ui-monospace, Menlo, monospace; font-size: .85rem; line-height: 1.5; background: white; border: 1px solid #eee; border-radius: 6px; padding: .75rem; white-space: pre-wrap; }
+    .context .quote { background: #fff3b0; font-weight: 600; }
+    .actions { margin-top: .6rem; display: flex; gap: .5rem; align-items: center; }
+    .actions input[type=text] { flex: 1; padding: .3rem .5rem; }
+    button { padding: .35rem .9rem; border-radius: 6px; border: 1px solid #ccc; cursor: pointer; background: white; }
+    button.approve { background: #2e7d32; color: white; border-color: #2e7d32; }
+    button.reject { background: #c0392b; color: white; border-color: #c0392b; }
+    .note { font-style: italic; color: #444; font-size: .85rem; }
+    .empty { color: #777; font-style: italic; }
+  </style>
+</head>
+<body>
+  <h1>Review queue</h1>
+  <p style="font-size:.85rem;color:#555;">
+    Low-confidence extractions need approval before they count as a finding.
+    Unverified extractions failed the citation check (their quoted text does not
+    exactly match the source document at the claimed offset) and cannot be
+    approved — they're shown here only so a reviewer can see what the pipeline
+    excluded and why.
+  </p>
+
+  <h2>Pending ({{ pending|length }})</h2>
+  {% if not pending %}
+    <p class="empty">Nothing pending.</p>
+  {% endif %}
+  {% for item in pending %}
+    <div class="item {{ item.reason }}">
+      <div class="meta">
+        <span class="badge {{ item.reason }}">{{ item.reason }}</span>
+        <span class="badge {{ item.method }}">{{ item.method }}</span>
+        {{ item.contract_id }} — <strong>{{ item.clause_type }}</strong> — confidence {{ "%.2f"|format(item.confidence) }}
+      </div>
+      <div class="context">{{ item.context_before }}<span class="quote">{{ item.extracted_text }}</span>{{ item.context_after }}</div>
+      <div class="actions">
+        <form method="post" action="/queue/{{ item.item_id }}/approve" style="display:flex; gap:.5rem; flex:1;">
+          <input type="text" name="note" placeholder="optional note">
+          {% if item.reason == "unverified" %}
+            <button type="submit" disabled title="unverified items cannot be approved">Approve</button>
+          {% else %}
+            <button type="submit" class="approve">Approve</button>
+          {% endif %}
+        </form>
+        <form method="post" action="/queue/{{ item.item_id }}/reject">
+          <button type="submit" class="reject">Reject</button>
+        </form>
+      </div>
+    </div>
+  {% endfor %}
+
+  <h2>Decided ({{ decided|length }})</h2>
+  {% if not decided %}
+    <p class="empty">No decisions yet.</p>
+  {% endif %}
+  {% for item in decided %}
+    <div class="item {{ item.status }}">
+      <div class="meta">
+        <span class="badge {{ item.reason }}">{{ item.reason }}</span>
+        <span class="badge {{ item.method }}">{{ item.method }}</span>
+        {{ item.contract_id }} — <strong>{{ item.clause_type }}</strong> — {{ item.status }} at {{ item.reviewed_at }}
+      </div>
+      <div class="context">{{ item.context_before }}<span class="quote">{{ item.extracted_text }}</span>{{ item.context_after }}</div>
+      {% if item.reviewer_note %}<div class="note">note: {{ item.reviewer_note }}</div>{% endif %}
+    </div>
+  {% endfor %}
+</body>
+</html>

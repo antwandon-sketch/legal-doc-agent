@@ -1,0 +1,27 @@
+# secrets
+.env
+
+# CUAD corpus (fetched via scripts/fetch_cuad.py, not committed)
+data/cuad/raw/
+data/cuad/*.zip
+
+# venv
+venv/
+.venv/
+
+# python
+__pycache__/
+*.pyc
+*.pyo
+.pytest_cache/
+*.egg-info/
+
+# review queue / eval output (generated artifacts, not source)
+review_queue/
+eval_reports/
+findings.json
+
+# editor / os
+.DS_Store
+.vscode/
+.idea/
