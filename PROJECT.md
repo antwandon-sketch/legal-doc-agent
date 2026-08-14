@@ -359,6 +359,45 @@ The upstream repo has moved since the dataset was published — `TheAtticusProje
 | 5 | LLM extractor has systematically low precision on categories a contract doesn't address — quotes topically-adjacent-but-wrong text (e.g. a rights-*disclaiming* clause as an answer to a rights-*granting* question) instead of abstaining | First 10-contract live LLM run | **Closed for v1 as a known limitation, not fixed.** Two resolution attempts: (1) bare `NOT_FOUND` instruction — net regression, recall fell more than precision improved; (2) few-shot examples added on top — precision up ~25% relative (0.238→0.297) and macro-F1 up, but recall still down ~9% relative (0.456→0.414) vs. the original baseline, so it does not clearly beat baseline on every axis. Per the explicit stopping rule applied when this was investigated, iteration stopped there rather than chasing a third prompt variant. Confidence-based review-queue routing means ~79% of the remaining false positives (the 0.6-confidence, multi-citation ones) never reach a user unreviewed — the real exposure is smaller than the raw false-positive count suggests, but the underlying precision gap is real and open. |
 | — | Batch API cost-optimization attempt: a synchronous cache-warm-up call per contract, intended to guarantee cache hits before the remaining calls went through the 50%-off Message Batches API, only achieved a **74.6% real cache-hit rate** (537/720 requests) — not the near-100% the mitigation was designed for | 18-contract stratified cost-optimized eval | **Negative result, documented, not a code defect.** Root cause: real propagation lag between a synchronous cache write and the Batch API's distributed dispatch — miss rate correlated directly with how recently a contract's warm-up call had run (2.5% miss rate for the earliest-warmed contracts vs. 47.5–67.5% for the latest). Because a cache *write* costs 20x a cache *read*, that partial miss rate drove the real cost to ~$25.16 — 4x the $6.25 pre-run estimate, and worse than never using the Batch API at all ($8.83, the plain synchronous path). `src/extract/llm_extract_batch.py` is left in the repo as working, tested code; it is not the recommended extraction path. If revisited, the concrete next fix suggested by the evidence is a deliberate buffer delay (2-3 min) between the last warm-up call and batch submission. |
 
+## Adversarial demo (2026-08-14)
+
+`demos/adversarial_citation_demo.py` is a small, standalone script (not part
+of the eval harness or pipeline) that makes the citation-validation
+guarantee concrete rather than asserted. Run it with
+`python demos/adversarial_citation_demo.py` (needs `ANTHROPIC_API_KEY`;
+`--no-live` skips the live call). A captured real run is saved at
+`demos/sample_output.txt`.
+
+It picks a CUAD test contract (`LohaCompanyltd...Supply Agreement`, which
+has 35/41 categories marked absent by CUAD's own annotation) and asks the
+live LLM extractor about categories it genuinely doesn't contain, in
+descending order of the false-positive rate Bug #5 above documented. Two
+acts, both real code paths from `src/`, no mocking:
+
+- **Act 1 (real model attempt):** on the captured run, `Uncapped Liability`
+  (absent per CUAD) got 4 citations back — real contract text (a late-delivery
+  penalty clause, a claims-inspection clause), genuinely present at the
+  offsets claimed, just not evidence of an uncapped-liability provision. This
+  is Bug #5 reproduced live, not staged. `citation_check.py` correctly marks
+  these `verified` — the text really is there — which is the validator's
+  honest scope: it checks text-at-offset, not category-correctness. These
+  are kept out of auto-findings by the confidence gate instead
+  (multi-citation confidence 0.6 < 0.75 threshold → queued as
+  `low_confidence`, where a human reviewer, not the validator, has to catch
+  the wrong attribution).
+- **Act 2 (deliberately corrupted span):** the same real citation text with
+  its offset shifted by one character, so `extracted_text` no longer matches
+  the source at that location — the actual hallucination shape the validator
+  exists to catch. `validation_status` comes back `unverified`, `route()`
+  sends it to the queue with `reason="unverified"`, and a simulated attempt
+  to `approve()` it anyway raises `ValueError` — the server-side guarantee
+  in `src/review/queue.py:approve` refusing regardless of caller.
+
+The two acts together show the guarantee's real shape: absolute for
+fabricated text-at-offset (Act 2, always blocked), not a claim about
+category-correctness (Act 1, a separate and still-open problem — see Bug
+#5's confidence-routing mitigation, not a fix).
+
 ### Permanent non-determinism caveat
 
 `claude-sonnet-5` — and the whole Claude 5 / 4.6+ model family the project is built on — rejects `temperature`, `top_p`, and `top_k` outright (400: "temperature is deprecated for this model"). There is no supported way to pin sampling determinism on this model generation; the parameters have to be omitted entirely, not set to a specific value (including `0`). This means **every LLM-extractor comparison in this document is a single run at the API's non-deterministic default, not a controlled, repeatable A/B** — the bug #5 baseline vs. resolution attempt 1 vs. attempt 2 numbers, and the sync-vs-batch cost comparison, all carry an irreducible amount of run-to-run sampling noise on top of whatever the code or prompt change actually did. This is flagged wherever it's directly relevant above, and is restated here as a standing property of the model this project runs on, not a gap that a future session can close by trying harder — any future re-measurement on this model family inherits the same caveat.

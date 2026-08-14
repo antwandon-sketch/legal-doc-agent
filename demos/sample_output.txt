@@ -1,0 +1,109 @@
+# Captured real output of `python demos/adversarial_citation_demo.py`,
+# live API run against claude-sonnet-5, 2026-08-14. Re-running will call the
+# live API again and, per PROJECT.md's non-determinism caveat (this model
+# family rejects temperature/top_p/top_k outright), may reproduce a
+# different false attribution or a different category -- the script's Act 2
+# (deliberately corrupted span) is deterministic and will always look like
+# this regardless of what Act 1's live call does.
+
+==============================================================================
+ADVERSARIAL CITATION DEMO
+==============================================================================
+Contract: LohaCompanyltd_20191209_F-1_EX-10.16_11917878_EX-10.16_Supply Agreement
+
+ACT 1 -- real live LLM extractor, categories CUAD marks absent from this contract
+------------------------------------------------------------------------------
+  trying 'Post-Termination Services'... abstained (NOT_FOUND)
+  trying 'Uncapped Liability'... got 4 citation(s)
+
+Model was asked about 'Uncapped Liability' -- CUAD ground truth says this contract
+does not contain that clause. It answered anyway:
+
+BEFORE (model's claim):
+  clause_type:        Uncapped Liability
+  extracted_text:     'The penalty, however, shall not exceed 5% of the total value of the goods involved in the late delivery. The rate of penalty is charged at 0.5% for every seven days, odd days less than seven days should be counted as seven days. '
+  source_char_start:  9149
+  source_char_end:    9378
+  confidence:         0.6
+  text ACTUALLY at that offset: 'The penalty, however, shall not exceed 5% of the total value of the goods involved in the late delivery. The rate of penalty is charged at 0.5% for every seven days, odd days less than seven days should be counted as seven days. '
+
+AFTER (validator + queue):
+  validation_status:  verified
+  auto-approved:      False
+  routed to queue:    reason='low_confidence' status='pending'
+  (verified + low-confidence -> a human reviewer CAN approve this one; that's by design, see PROJECT.md's confidence-routing note. The category attribution is still wrong -- a reviewer, not the validator, has to catch that.)
+
+BEFORE (model's claim):
+  clause_type:        Uncapped Liability
+  extracted_text:     'In case the Sellers fail to make delivery ten weeks later than the time of shipment stipulated in the Contract, the Buyers have the right to cancel the contract and the Sellers, in spite of the cancellation, shall still pay the aforesaid penalty to the Buyers without delay, the seller should refund the money received and pay the 30% of the total goods price of the penalty 19. '
+  source_char_start:  9378
+  source_char_end:    9757
+  confidence:         0.6
+  text ACTUALLY at that offset: 'In case the Sellers fail to make delivery ten weeks later than the time of shipment stipulated in the Contract, the Buyers have the right to cancel the contract and the Sellers, in spite of the cancellation, shall still pay the aforesaid penalty to the Buyers without delay, the seller should refund the money received and pay the 30% of the total goods price of the penalty 19. '
+
+AFTER (validator + queue):
+  validation_status:  verified
+  auto-approved:      False
+  routed to queue:    reason='low_confidence' status='pending'
+  (verified + low-confidence -> a human reviewer CAN approve this one; that's by design, see PROJECT.md's confidence-routing note. The category attribution is still wrong -- a reviewer, not the validator, has to catch that.)
+
+BEFORE (model's claim):
+  clause_type:        Uncapped Liability
+  extracted_text:     'CLAIMS: Within 7 days after the arrival of the goods at destination, should the quality, specification, or quantity be found not in conformity with the stipulations of the Contract except those claims for which the insurance company or the owners of the vessel are liable, the Buyers, on the strength of the Inspection Certificate issued by the China Commodity Inspection Bureau, have the right to claim for replacement with new goods, or for compensation, and all the expenses (such as inspection charges, freight for returning the goods and for sending the replacement, insurance premium, storage and loading and unloading charges etc.) shall be borne by the Sellers. '
+  source_char_start:  6657
+  source_char_end:    7327
+  confidence:         0.6
+  text ACTUALLY at that offset: 'CLAIMS: Within 7 days after the arrival of the goods at destination, should the quality, specification, or quantity be found not in conformity with the stipulations of the Contract except those claims for which the insurance company or the owners of the vessel are liable, the Buyers, on the strength of the Inspection Certificate issued by the China Commodity Inspection Bureau, have the right to claim for replacement with new goods, or for compensation, and all the expenses (such as inspection charges, freight for returning the goods and for sending the replacement, insurance premium, storage and loading and unloading charges etc.) shall be borne by the Sellers. '
+
+AFTER (validator + queue):
+  validation_status:  verified
+  auto-approved:      False
+  routed to queue:    reason='low_confidence' status='pending'
+  (verified + low-confidence -> a human reviewer CAN approve this one; that's by design, see PROJECT.md's confidence-routing note. The category attribution is still wrong -- a reviewer, not the validator, has to catch that.)
+
+BEFORE (model's claim):
+  clause_type:        Uncapped Liability
+  extracted_text:     "The Sellers, in accordance with the Buyers' claim, shall be responsible for the immediate elimination of the defect(s), complete or partial replacement of the commodity or shall devaluate the commodity according to the state of defect(s). Where necessary, the Buyers shall be at liberty to eliminate the defect(s) themselves at the Sellers' expenses. "
+  source_char_start:  7395
+  source_char_end:    7746
+  confidence:         0.6
+  text ACTUALLY at that offset: "The Sellers, in accordance with the Buyers' claim, shall be responsible for the immediate elimination of the defect(s), complete or partial replacement of the commodity or shall devaluate the commodity according to the state of defect(s). Where necessary, the Buyers shall be at liberty to eliminate the defect(s) themselves at the Sellers' expenses. "
+
+AFTER (validator + queue):
+  validation_status:  verified
+  auto-approved:      False
+  routed to queue:    reason='low_confidence' status='pending'
+  (verified + low-confidence -> a human reviewer CAN approve this one; that's by design, see PROJECT.md's confidence-routing note. The category attribution is still wrong -- a reviewer, not the validator, has to catch that.)
+
+==============================================================================
+ACT 2 -- deliberately corrupted span (SIMULATED, not a real model claim)
+------------------------------------------------------------------------------
+Same category and same real contract text as above, but the claimed offset
+is shifted by one character -- the actual shape of hallucination the
+citation validator exists to catch (off-by-one / chunking-edge-case span).
+
+BEFORE (simulated claim):
+  clause_type:        Uncapped Liability
+  extracted_text:     'The penalty, however, shall not exceed 5% of the total value of the goods involved in the late delivery. The rate of penalty is charged at 0.5% for every seven days, odd days less than seven days should be counted as seven days. '
+  source_char_start:  9150
+  source_char_end:    9379
+  confidence:         0.6
+  text ACTUALLY at that offset: 'he penalty, however, shall not exceed 5% of the total value of the goods involved in the late delivery. The rate of penalty is charged at 0.5% for every seven days, odd days less than seven days should be counted as seven days. I'
+
+AFTER (validator + queue):
+  validation_status:  unverified
+  auto-approved:      False
+  routed to queue:    reason='unverified' status='pending'
+  attempting queue_mod.approve() anyway (simulating a reviewer/caller trying to wave it through):
+    approve() raised ValueError: item c2b2384569a8ef72 is unverified (its cited text does not match the source document at the claimed offset) and can never be approved as a finding -- this is enforced regardless of caller
+
+==============================================================================
+SUMMARY
+==============================================================================
+Act 1 showed the validator's honest boundary: it verifies text-at-offset,
+not category-correctness, so a real-but-wrongly-attributed citation reads
+as 'verified' and is instead caught by confidence-based review routing.
+Act 2 showed the validator's actual job: any claim whose text does not
+exactly match the source at its claimed offset is marked 'unverified' and
+is structurally, server-side blocked from ever becoming an approved
+finding -- enforced in src/review/queue.py:approve regardless of caller.
