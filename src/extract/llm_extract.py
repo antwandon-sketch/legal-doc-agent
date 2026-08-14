@@ -35,6 +35,11 @@ from src.config import ANTHROPIC_API_KEY, ANTHROPIC_MODEL
 from src.extract.schema import ExtractedClause
 
 MAX_TOKENS = 4096
+# No temperature/top_p/top_k here, deliberately: ANTHROPIC_MODEL is a
+# claude-sonnet-5-family model, and that generation rejects sampling
+# parameters outright (400 "temperature is deprecated for this model") --
+# confirmed against the live API, see PROJECT.md. There is no supported way
+# to pin determinism via sampling params on this model generation.
 
 # Citations API does not return a numeric confidence score -- these are a
 # documented heuristic, not a model-reported probability. See PROJECT.md.
@@ -52,7 +57,7 @@ def _client() -> anthropic.Anthropic:
     return anthropic.Anthropic(api_key=ANTHROPIC_API_KEY)
 
 
-def _document_block(full_text: str, title: str, cache: bool = True) -> dict:
+def _document_block(full_text: str, title: str, cache: bool = True, ttl: str | None = None) -> dict:
     block = {
         "type": "document",
         "source": {"type": "text", "media_type": "text/plain", "data": full_text},
@@ -60,21 +65,80 @@ def _document_block(full_text: str, title: str, cache: bool = True) -> dict:
         "citations": {"enabled": True},
     }
     if cache:
-        block["cache_control"] = {"type": "ephemeral"}
+        cache_control = {"type": "ephemeral"}
+        if ttl:
+            cache_control["ttl"] = ttl
+        block["cache_control"] = cache_control
     return block
 
 
+def _per_category_content(doc_block: dict, question: str) -> list[dict]:
+    """The (document, instruction) content list for a single category question
+    -- shared by the synchronous per-category loop and the Batch API path so
+    the two can never drift apart (see PROJECT.md bug #4: a prior duplication
+    between the per-category and batched-prompt paths caused a real bug)."""
+    return [
+        doc_block,
+        {
+            "type": "text",
+            "text": (
+                f"{question}\n\nQuote only the exact contract text that "
+                "directly and specifically answers this question. Do not "
+                "quote text that is merely on the same general topic but "
+                "does not itself answer the question -- for example, a "
+                "clause that disclaims or negates a right is not an answer "
+                "to a question asking whether that right is granted, and a "
+                "clause about a related-but-different obligation is not an "
+                "answer either. If the contract does not address this "
+                "category at all, or only contains text that is thematically "
+                "related but doesn't actually answer the question, reply "
+                "with exactly: NOT_FOUND\n\n"
+                "Examples of correctly applying this distinction (these are "
+                "illustrative only, not from the contract below):\n\n"
+                '1. Question about "Third Party Beneficiary" rights being '
+                "granted to a non-party. The contract instead says: \"Except "
+                "as set forth in Article 11, no Person other than the "
+                "parties hereto shall have any right under this Agreement.\" "
+                "That disclaims third-party rights rather than granting "
+                "them, so the correct answer is: NOT_FOUND\n\n"
+                '2. Question about "Post-Termination Services" the seller '
+                "must continue providing. The contract instead says only: "
+                '"The confidentiality obligations in Section 9 shall '
+                'survive termination of this Agreement." That is a survival '
+                "clause about confidentiality, not a service obligation "
+                "after termination, so the correct answer is: NOT_FOUND\n\n"
+                '3. Question about "Governing Law." The contract says: '
+                '"This Agreement shall be governed by the laws of the '
+                'State of Delaware." That directly answers the question, '
+                "so here you SHOULD quote it -- don't withhold a genuine "
+                "answer just because these examples show cases of "
+                "abstaining."
+            ),
+        },
+    ]
+
+
+def _citation_field(cit, name: str):
+    """`cit` is either a plain dict (from parse_batched_response's
+    model_dump(), or from tests) or an SDK citation object straight off
+    response.content[i].citations (extract_contract_per_category passes
+    these through unconverted) -- accept either."""
+    if isinstance(cit, dict):
+        return cit.get(name)
+    return getattr(cit, name, None)
+
+
 def _citations_to_clauses(
-    contract_id: str, clause_type: str, citations: list[dict]
+    contract_id: str, clause_type: str, citations: list
 ) -> list[ExtractedClause]:
     clauses = []
     confidence = (
         CONFIDENCE_SINGLE_CITATION if len(citations) == 1 else CONFIDENCE_MULTI_CITATION
     )
     for cit in citations:
-        if cit.get("type") != "char_location":
+        if _citation_field(cit, "type") != "char_location":
             continue
-        text = cit["cited_text"]
+        text = _citation_field(cit, "cited_text")
         conf = confidence
         if len(text.strip()) < SHORT_SPAN_CHARS:
             conf = max(0.0, conf - CONFIDENCE_SHORT_SPAN_PENALTY)
@@ -83,8 +147,8 @@ def _citations_to_clauses(
                 contract_id=contract_id,
                 clause_type=clause_type,
                 extracted_text=text,
-                source_char_start=cit["start_char_index"],
-                source_char_end=cit["end_char_index"],
+                source_char_start=_citation_field(cit, "start_char_index"),
+                source_char_end=_citation_field(cit, "end_char_index"),
                 confidence=conf,
                 method="llm",
             )
@@ -109,32 +173,23 @@ def extract_contract_per_category(
         response = client.messages.create(
             model=model,
             max_tokens=MAX_TOKENS,
-            messages=[
-                {
-                    "role": "user",
-                    "content": [
-                        doc_block,
-                        {
-                            "type": "text",
-                            "text": (
-                                f"{question}\n\nQuote only the exact contract text that "
-                                "answers this. If nothing in the contract answers it, "
-                                'reply with exactly: "None found."'
-                            ),
-                        },
-                    ],
-                }
-            ],
+            messages=[{"role": "user", "content": _per_category_content(doc_block, question)}],
         )
-        citations = [
-            cit
-            for block in response.content
-            if block.type == "text"
-            for cit in (block.citations or [])
-        ]
+        citations = _citations_from_content(response.content)
         results.extend(_citations_to_clauses(contract_id, clause_type, citations))
 
     return results
+
+
+def _citations_from_content(content_blocks: list) -> list:
+    """Pull every citation out of a response's (or a batch result message's)
+    content blocks. Shared by the synchronous and Batch API paths."""
+    return [
+        cit
+        for block in content_blocks
+        if block.type == "text"
+        for cit in (block.citations or [])
+    ]
 
 
 _HEADING_RE = re.compile(r"^\s*#{1,4}\s*(?P<category>.+?)\s*$", re.MULTILINE)

@@ -1,0 +1,128 @@
+[
+  {
+    "index": 76,
+    "contract_id": "TRICITYBANKSHARESCORP_05_15_1998-EX-10-OUTSOURCING AGREEMENT",
+    "char_len": 101639,
+    "n_present_categories": 19,
+    "doc_tokens": 33566
+  },
+  {
+    "index": 91,
+    "contract_id": "GOOSEHEADINSURANCE,INC_04_02_2018-EX-10.6-Franchise Agreement",
+    "char_len": 300768,
+    "n_present_categories": 28,
+    "doc_tokens": 99134
+  },
+  {
+    "index": 62,
+    "contract_id": "IntegrityMediaInc_20010329_10-K405_EX-10.17_2373875_EX-10.17_Co-Branding Agreement",
+    "char_len": 29253,
+    "n_present_categories": 15,
+    "doc_tokens": 8334
+  },
+  {
+    "index": 30,
+    "contract_id": "BABCOCK_WILCOXENTERPRISES,INC_08_04_2015-EX-10.17-INTELLECTUAL PROPERTY AGREEMENT between THE BABCOCK _ WILCOX COMPANY and BABCOCK _ WILCOX ENTERPRISES, INC.",
+    "char_len": 112447,
+    "n_present_categories": 17,
+    "doc_tokens": 38269
+  },
+  {
+    "index": 94,
+    "contract_id": "PhotronicsInc_20171219_10-QA_EX-10.28_10982650_EX-10.28_Outsourcing Agreement",
+    "char_len": 25392,
+    "n_present_categories": 7,
+    "doc_tokens": 9337
+  },
+  {
+    "index": 39,
+    "contract_id": "BerkshireHillsBancorpInc_20120809_10-Q_EX-10.16_7708169_EX-10.16_Endorsement Agreement",
+    "char_len": 29629,
+    "n_present_categories": 15,
+    "doc_tokens": 10097
+  },
+  {
+    "index": 61,
+    "contract_id": "SoupmanInc_20150814_8-K_EX-10.1_9230148_EX-10.1_Franchise Agreement1",
+    "char_len": 144235,
+    "n_present_categories": 28,
+    "doc_tokens": 46257
+  },
+  {
+    "index": 18,
+    "contract_id": "HarpoonTherapeuticsInc_20200312_10-K_EX-10.18_12051356_EX-10.18_Development Agreement",
+    "char_len": 249551,
+    "n_present_categories": 25,
+    "doc_tokens": 86559
+  },
+  {
+    "index": 24,
+    "contract_id": "RitterPharmaceuticalsInc_20200313_S-4A_EX-10.54_12055220_EX-10.54_Development Agreement",
+    "char_len": 122688,
+    "n_present_categories": 23,
+    "doc_tokens": 42367
+  },
+  {
+    "index": 20,
+    "contract_id": "AIRSPANNETWORKSINC_04_11_2000-EX-10.5-Distributor Agreement",
+    "char_len": 70444,
+    "n_present_categories": 18,
+    "doc_tokens": 22143
+  },
+  {
+    "index": 72,
+    "contract_id": "BizzingoInc_20120322_8-K_EX-10.17_7504499_EX-10.17_Endorsement Agreement",
+    "char_len": 24223,
+    "n_present_categories": 16,
+    "doc_tokens": 8174
+  },
+  {
+    "index": 78,
+    "contract_id": "Monsanto Company - SECOND A_R EXCLUSIVE AGENCY AND MARKETING AGREEMENT ",
+    "char_len": 221382,
+    "n_present_categories": 24,
+    "doc_tokens": 73763
+  },
+  {
+    "index": 3,
+    "contract_id": "PACIRA PHARMACEUTICALS, INC. - A_R STRATEGIC LICENSING, DISTRIBUTION AND MARKETING AGREEMENT ",
+    "char_len": 145168,
+    "n_present_categories": 24,
+    "doc_tokens": 49562
+  },
+  {
+    "index": 100,
+    "contract_id": "XinhuaSportsEntertainmentLtd_20070221_F-1_EX-99.4_645553_EX-99.4_Content License Agreement",
+    "char_len": 19128,
+    "n_present_categories": 12,
+    "doc_tokens": 5994
+  },
+  {
+    "index": 2,
+    "contract_id": "DovaPharmaceuticalsInc_20181108_10-Q_EX-10.2_11414857_EX-10.2_Promotion Agreement",
+    "char_len": 175580,
+    "n_present_categories": 25,
+    "doc_tokens": 61853
+  },
+  {
+    "index": 26,
+    "contract_id": "USASYNTHETICFUELCORP_10_21_2010-EX-10.10-STRATEGIC ALLIANCE AGREEMENT",
+    "char_len": 52252,
+    "n_present_categories": 11,
+    "doc_tokens": 17021
+  },
+  {
+    "index": 65,
+    "contract_id": "GSITECHNOLOGYINC_11_16_2009-EX-10.2-INTELLECTUAL PROPERTY AGREEMENT between SONY ELECTRONICS INC. and GSI TECHNOLOGY, INC.",
+    "char_len": 37337,
+    "n_present_categories": 14,
+    "doc_tokens": 13241
+  },
+  {
+    "index": 57,
+    "contract_id": "PaperexchangeComInc_20000322_S-1A_EX-10.4_5202103_EX-10.4_Co-Branding Agreement",
+    "char_len": 92875,
+    "n_present_categories": 23,
+    "doc_tokens": 30731
+  }
+]
